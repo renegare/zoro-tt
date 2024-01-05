@@ -11,7 +11,8 @@
   "scripts": {
     "clean": "git clean -e \"/*/.env*\" -xfd",
     "@client": "yarn workspace @zorott/client",
-    "@api": "yarn workspace @zorott/api"
+    "@api": "yarn workspace @zorott/api",
+    "@test": "yarn workspace @zorott/test"
   },
   "dependencies": {
     "@nestjs/cli": "^10.2.1"
