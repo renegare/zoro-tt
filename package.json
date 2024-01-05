@@ -1,6 +1,16 @@
 {
-  "name": "zoro-tech-test",
+  "name": "zorott",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT"
+  "license": "MIT",
+  "workspaces": [
+    "client",
+    "api"
+  ],
+  "scripts": {
+    "clean": "git clean -e \"/*/.env*\" -xfd",
+    "@client": "yarn workspace @zorott/client",
+    "@api": "yarn workspace @zorott/api"
+  }
+
 }
