@@ -1,15 +1,36 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from './../src/app.module';
-import { JwtService } from '@nestjs/jwt';
-import { v4 as createId } from 'uuid';
+import { Test, TestingModule } from '@nestjs/testing';
 import { Knex } from 'knex';
 import { getConnectionToken } from 'nest-knexjs';
+import * as request from 'supertest';
+import { v4 as createId } from 'uuid';
+import { User, hashPassword } from '../src/app.service';
+import { AppModule } from './../src/app.module';
+
+const generateUser = async (
+  overrides: Partial<User> = {},
+  password = 'password',
+): Promise<User> => {
+  const [hash, salt] = await hashPassword(password, 10);
+
+  return {
+    id: createId(),
+    username: faker.internet.userName(),
+    email: faker.internet.email(),
+    password: hash,
+    salt,
+    firstName: faker.person.firstName(),
+    lastName: faker.person.lastName(),
+    createdAt: faker.date.past(),
+    updatedAt: new Date(),
+    deletedAt: null,
+    ...overrides,
+  };
+};
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
-  let jwt: JwtService;
   let db: Knex;
 
   beforeEach(async () => {
@@ -18,7 +39,6 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    jwt = app.get(JwtService);
     db = app.get<Knex>(getConnectionToken());
 
     await app.init();
@@ -32,29 +52,66 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .expect('Hello World!')
+      .on('error', console.error);
   });
 
   it('/auth (POST)', async () => {
-    const response = await request(app.getHttpServer())
+    const password = createId();
+    const user = await generateUser({}, password);
+    await db.table('users').insert(user);
+
+    let response = await request(app.getHttpServer())
       .post('/auth')
       .send({
-        username: 'username',
-        password: 'password',
+        username: user.username,
+        password,
       })
       .expect(201);
-
     expect(response.body).toEqual({
-      token: expect.any(String),
+      accessToken: expect.any(String),
     });
+
+    const accessToken = response.body.accessToken;
+
+    response = await request(app.getHttpServer())
+      .get('/whoami')
+      .set({ Authorization: `Bearer ${accessToken}` })
+      .expect(200);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        sub: user.id,
+        ...user,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      }),
+    );
   });
 
-  it('/auth (POST) fail', async () => {
+  it('/auth (POST) fail incorrect creds', async () => {
+    const user = await generateUser();
+    await db.table('users').insert(user);
+
     await request(app.getHttpServer())
       .post('/auth')
       .send({
-        username: 'incorrect',
+        username: user.username,
         password: 'incorrect',
+      })
+      .expect(401);
+  });
+
+  it('/auth (POST) fail deleted user', async () => {
+    const password = 'password';
+    const user = await generateUser({ deletedAt: new Date() }, password);
+    await db.table('users').insert(user);
+
+    await request(app.getHttpServer())
+      .post('/auth')
+      .send({
+        username: user.username,
+        password,
       })
       .expect(401);
   });
@@ -68,22 +125,5 @@ describe('AppController (e2e)', () => {
       .get('/whoami')
       .set({ Authorization: `Bearer fake` })
       .expect(401);
-  });
-
-  it('/whoami (GET) success', async () => {
-    const id = createId();
-    const accessToken = await jwt.signAsync({ sub: id, username: 'username' });
-
-    const response = await request(app.getHttpServer())
-      .get('/whoami')
-      .set({ Authorization: `Bearer ${accessToken}` })
-      .expect(200);
-
-    expect(response.body).toEqual(
-      expect.objectContaining({
-        sub: id,
-        username: 'username',
-      }),
-    );
   });
 });
