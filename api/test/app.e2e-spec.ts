@@ -21,4 +21,16 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect('Hello World!');
   });
+
+  it('/auth (POST)', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/auth')
+      .send({
+        username: 'username',
+        password: 'password',
+      })
+      .expect(200);
+
+    expect(response.body).toMatchInlineSnapshot();
+  });
 });
