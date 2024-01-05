@@ -6,7 +6,8 @@
   "license": "MIT",
   "workspaces": [
     "client",
-    "api"
+    "api",
+    "test"
   ],
   "scripts": {
     "clean": "git clean -e \"/*/.env*\" -xfd",
