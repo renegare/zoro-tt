@@ -29,8 +29,12 @@ describe('AppController (e2e)', () => {
         username: 'username',
         password: 'password',
       })
-      .expect(200);
+      .expect(201);
 
-    expect(response.body).toMatchInlineSnapshot();
+    expect(response.body).toMatchInlineSnapshot(`
+      {
+        "token": "XXX",
+      }
+    `);
   });
 });
