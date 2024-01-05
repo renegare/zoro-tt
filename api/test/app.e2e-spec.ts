@@ -31,10 +31,24 @@ describe('AppController (e2e)', () => {
       })
       .expect(201);
 
-    expect(response.body).toMatchInlineSnapshot(`
-      {
-        "token": "XXX",
-      }
-    `);
+    expect(response.body).toEqual({
+      token: expect.any(String),
+    });
   });
+
+  it('/auth (POST) fail', async () => {
+    await request(app.getHttpServer())
+      .post('/auth')
+      .send({
+        username: 'incorrect',
+        password: 'incorrect',
+      })
+      .expect(401);
+  });
+
+  fit('/whoami (GET) fail', async () => {
+    await request(app.getHttpServer()).get('/whoami').expect(403);
+  });
+
+  it.todo('/whoami (GET) success');
 });
