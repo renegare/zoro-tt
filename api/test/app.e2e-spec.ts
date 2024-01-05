@@ -1,33 +1,11 @@
-import { faker } from '@faker-js/faker';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Knex } from 'knex';
 import { getConnectionToken } from 'nest-knexjs';
 import * as request from 'supertest';
 import { v4 as createId } from 'uuid';
-import { User, hashPassword } from '../src/app.service';
 import { AppModule } from './../src/app.module';
-
-const generateUser = async (
-  overrides: Partial<User> = {},
-  password = 'password',
-): Promise<User> => {
-  const [hash, salt] = await hashPassword(password, 10);
-
-  return {
-    id: createId(),
-    username: faker.internet.userName(),
-    email: faker.internet.email(),
-    password: hash,
-    salt,
-    firstName: faker.person.firstName(),
-    lastName: faker.person.lastName(),
-    createdAt: faker.date.past(),
-    updatedAt: new Date(),
-    deletedAt: null,
-    ...overrides,
-  };
-};
+import { generateUser } from './generateUser';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;

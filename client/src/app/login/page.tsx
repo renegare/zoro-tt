@@ -8,7 +8,7 @@ export default function Home() {
       <Input name="email" />
       <Input type="password" name="password" />
 
-      <Button>Login</Button>
+      <Button type="submit">Login</Button>
     </Flex>
   )
 }
