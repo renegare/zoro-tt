@@ -2,9 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { JwtService } from '@nestjs/jwt';
+import { v4 as createId } from 'uuid';
+import { Knex } from 'knex';
+import { getConnectionToken } from 'nest-knexjs';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
+  let jwt: JwtService;
+  let db: Knex;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -12,7 +18,14 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    jwt = app.get(JwtService);
+    db = app.get<Knex>(getConnectionToken());
+
     await app.init();
+  });
+
+  beforeEach(async () => {
+    await db.table('users').truncate();
   });
 
   it('/ (GET)', () => {
@@ -46,9 +59,31 @@ describe('AppController (e2e)', () => {
       .expect(401);
   });
 
-  fit('/whoami (GET) fail', async () => {
-    await request(app.getHttpServer()).get('/whoami').expect(403);
+  it('/whoami (GET) fail with no token', async () => {
+    await request(app.getHttpServer()).get('/whoami').expect(401);
   });
 
-  it.todo('/whoami (GET) success');
+  it('/whoami (GET) fail with fake token', async () => {
+    await request(app.getHttpServer())
+      .get('/whoami')
+      .set({ Authorization: `Bearer fake` })
+      .expect(401);
+  });
+
+  it('/whoami (GET) success', async () => {
+    const id = createId();
+    const accessToken = await jwt.signAsync({ sub: id, username: 'username' });
+
+    const response = await request(app.getHttpServer())
+      .get('/whoami')
+      .set({ Authorization: `Bearer ${accessToken}` })
+      .expect(200);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        sub: id,
+        username: 'username',
+      }),
+    );
+  });
 });
